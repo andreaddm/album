@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getEmailEnv } from "@/lib/email/env";
 import { sendEmail } from "@/lib/email/provider";
 import {
   customerReceiptEmail,
@@ -17,10 +18,13 @@ export async function sendPurchaseRequestEmails(referenceCode: string) {
     return;
   }
 
-  await Promise.all([
-    dispatchTemplate(context, "owner_notification"),
-    dispatchTemplate(context, "customer_receipt"),
-  ]);
+  const tasks = [dispatchTemplate(context, "owner_notification")];
+
+  if (getEmailEnv().sendCustomerReceipt) {
+    tasks.push(dispatchTemplate(context, "customer_receipt"));
+  }
+
+  await Promise.all(tasks);
 }
 
 export async function retryPurchaseEmail(

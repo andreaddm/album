@@ -57,7 +57,10 @@ export default async function AdminSettingsPage() {
           {emailEnv.from ? ` · mittente ${emailEnv.from}` : ""}.
           {!emailEnv.resendApiKey
             ? " Manca RESEND_API_KEY: gli invii falliranno finché non la configuri."
-            : ""}
+            : ""}{" "}
+          {emailEnv.sendCustomerReceipt
+            ? "Ricevuta automatica al cliente: attiva."
+            : "Ricevuta automatica al cliente: disattiva (solo notifica al venditore)."}
         </p>
       )}
 
