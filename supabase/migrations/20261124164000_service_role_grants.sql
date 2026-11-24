@@ -1,0 +1,9 @@
+grant select, insert, update, delete on table public.profiles to service_role;
+grant select, insert, update, delete on table public.products to service_role;
+grant select, insert, update, delete on table public.product_media to service_role;
+grant select, insert, update, delete on table public.product_features to service_role;
+grant select, insert, update, delete on table public.orders to service_role;
+grant select, insert, update, delete on table public.order_items to service_role;
+grant select, insert, update, delete on table public.store_settings to service_role;
+grant select, insert, update, delete on table public.email_logs to service_role;
+grant select, insert, update, delete on table public.admin_audit_logs to service_role;
