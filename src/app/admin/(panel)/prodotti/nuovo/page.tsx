@@ -1,13 +1,23 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { ProductForm } from "@/components/admin/product-form";
 import { ButtonLink } from "@/components/ui/button";
+import { countFeaturedProducts } from "@/lib/products/admin";
+import { getAdminStoreSettings } from "@/lib/settings/admin";
 
 export const metadata: Metadata = {
   title: "Nuovo prodotto",
   robots: { index: false, follow: false },
 };
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  await connection();
+  const [settings, otherFeaturedCount] = await Promise.all([
+    getAdminStoreSettings(),
+    countFeaturedProducts(),
+  ]);
+  const featuredLimit = settings?.featuredLimit ?? 3;
+
   return (
     <main className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -21,7 +31,10 @@ export default function NewProductPage() {
           Torna all&apos;elenco
         </ButtonLink>
       </div>
-      <ProductForm />
+      <ProductForm
+        featuredLimit={featuredLimit}
+        otherFeaturedCount={otherFeaturedCount}
+      />
     </main>
   );
 }

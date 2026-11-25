@@ -10,13 +10,18 @@ import {
   PRODUCT_IMAGES_BUCKET,
   productImagePath,
 } from "@/lib/media/storage";
-import { getAdminProduct, slugExists } from "@/lib/products/admin";
+import {
+  countFeaturedProducts,
+  getAdminProduct,
+  slugExists,
+} from "@/lib/products/admin";
 import {
   fieldErrorsFromSchema,
   productInputSchema,
   type ProductInput,
 } from "@/lib/products/schema";
 import { slugifyName, uniqueSlug } from "@/lib/products/slug";
+import { getAdminStoreSettings } from "@/lib/settings/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,8 +45,13 @@ export async function createProduct(input: unknown): Promise<ActionResult> {
     return {
       ok: false,
       message: "Controlla i campi evidenziati.",
-      fieldErrors: { slug: "Questo slug è già in uso." },
+      fieldErrors: { slug: "Questo link prodotto è già in uso." },
     };
+  }
+
+  const featuredError = await validateFeaturedFlag(parsed.data.isFeatured);
+  if (featuredError) {
+    return featuredError;
   }
 
   const supabase = await createClient();
@@ -52,6 +62,15 @@ export async function createProduct(input: unknown): Promise<ActionResult> {
     .single();
 
   if (error || !data) {
+    if (error?.code === "23514" && parsed.data.isFeatured) {
+      return {
+        ok: false,
+        message: "Controlla i campi evidenziati.",
+        fieldErrors: {
+          isFeatured: "Hai raggiunto il limite di prodotti in evidenza.",
+        },
+      };
+    }
     return { ok: false, message: "Non è stato possibile creare il prodotto." };
   }
 
@@ -86,8 +105,16 @@ export async function updateProduct(
     return {
       ok: false,
       message: "Controlla i campi evidenziati.",
-      fieldErrors: { slug: "Questo slug è già in uso." },
+      fieldErrors: { slug: "Questo link prodotto è già in uso." },
     };
+  }
+
+  const featuredError = await validateFeaturedFlag(
+    parsed.data.isFeatured,
+    productId,
+  );
+  if (featuredError) {
+    return featuredError;
   }
 
   const supabase = await createClient();
@@ -97,6 +124,15 @@ export async function updateProduct(
     .eq("id", productId);
 
   if (error) {
+    if (error.code === "23514" && parsed.data.isFeatured) {
+      return {
+        ok: false,
+        message: "Controlla i campi evidenziati.",
+        fieldErrors: {
+          isFeatured: "Hai raggiunto il limite di prodotti in evidenza.",
+        },
+      };
+    }
     return { ok: false, message: "Non è stato possibile salvare il prodotto." };
   }
 
@@ -179,6 +215,7 @@ export async function duplicateProduct(
       description: product.description,
       is_published: false,
       is_available: product.isAvailable,
+      is_featured: false,
       availability_notice_enabled: product.availabilityNoticeEnabled,
       availability_notice_text: product.availabilityNoticeText,
     })
@@ -517,9 +554,37 @@ function toProductRow(data: ProductInput) {
     description: data.description,
     is_published: data.isPublished,
     is_available: data.isAvailable,
+    is_featured: data.isFeatured,
     availability_notice_enabled: data.availabilityNoticeEnabled,
     availability_notice_text: data.availabilityNoticeText,
   };
+}
+
+async function validateFeaturedFlag(
+  isFeatured: boolean,
+  excludeId?: string,
+): Promise<ActionResult | null> {
+  if (!isFeatured) {
+    return null;
+  }
+
+  const [settings, featuredCount] = await Promise.all([
+    getAdminStoreSettings(),
+    countFeaturedProducts(excludeId),
+  ]);
+  const limit = settings?.featuredLimit ?? 3;
+
+  if (featuredCount >= limit) {
+    return {
+      ok: false,
+      message: "Controlla i campi evidenziati.",
+      fieldErrors: {
+        isFeatured: `Puoi mettere in evidenza al massimo ${limit} prodotti.`,
+      },
+    };
+  }
+
+  return null;
 }
 
 async function replaceFeatures(

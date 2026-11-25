@@ -11,9 +11,12 @@ export const productInputSchema = z.object({
   slug: z
     .string()
     .trim()
-    .min(1, "Inserisci lo slug.")
+    .min(1, "Inserisci il link prodotto.")
     .max(120)
-    .refine(isValidSlug, "Lo slug può contenere solo lettere minuscole, numeri e trattini."),
+    .refine(
+      isValidSlug,
+      "Il link prodotto può contenere solo lettere minuscole, numeri e trattini.",
+    ),
   price: z
     .number({ error: "Inserisci un prezzo valido." })
     .finite()
@@ -23,6 +26,7 @@ export const productInputSchema = z.object({
   description: z.string().trim().max(8000).nullable(),
   isPublished: z.boolean(),
   isAvailable: z.boolean(),
+  isFeatured: z.boolean(),
   availabilityNoticeEnabled: z.boolean(),
   availabilityNoticeText: z.string().trim().max(160).nullable(),
   features: z.array(productFeatureInputSchema).max(30),

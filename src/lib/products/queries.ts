@@ -7,6 +7,13 @@ import type {
   PublishedProduct,
   StorePublicSettings,
 } from "@/lib/products/types";
+import {
+  DEFAULT_HOMEPAGE_HOW_STEPS,
+  DEFAULT_HOMEPAGE_WHY_ITEMS,
+  MAX_HOMEPAGE_WHY_ITEMS,
+  MIN_HOMEPAGE_WHY_ITEMS,
+  normalizeVariableCopyItems,
+} from "@/lib/settings/homepage-defaults";
 import { createPublicClient } from "@/lib/supabase/public";
 import { requireSupabasePublicEnv } from "@/lib/supabase/env";
 
@@ -35,6 +42,7 @@ type ProductRow = {
   short_description: string | null;
   description: string | null;
   is_available: boolean;
+  is_featured: boolean;
   availability_notice_enabled: boolean;
   availability_notice_text: string | null;
   product_media: MediaRow[] | null;
@@ -52,7 +60,7 @@ export async function listPublishedProducts(): Promise<PublishedProduct[]> {
     .select(
       `
       id, name, slug, price, short_description, description,
-      is_available, availability_notice_enabled, availability_notice_text,
+      is_available, is_featured, availability_notice_enabled, availability_notice_text,
       product_media (id, media_type, storage_path, external_url, platform, alt_text, position),
       product_features (id, name, value, position)
     `,
@@ -80,7 +88,17 @@ export async function getStorePublicSettings(): Promise<StorePublicSettings | nu
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("store_settings")
-    .select("store_name, whatsapp_number, homepage_intro, unavailable_message")
+    .select(
+      `
+      store_name, whatsapp_number, homepage_headline, homepage_intro,
+      unavailable_message, featured_limit,
+      homepage_eyebrow, homepage_cta_catalog, homepage_cta_how,
+      homepage_featured_title, homepage_how_title, homepage_how_steps,
+      homepage_why_title, homepage_why_items, homepage_why_cta,
+      privacy_title, privacy_body, cookie_title, cookie_body,
+      about_title, about_body
+    `,
+    )
     .eq("id", "default")
     .maybeSingle();
 
@@ -92,11 +110,40 @@ export async function getStorePublicSettings(): Promise<StorePublicSettings | nu
     return null;
   }
 
+  const featuredLimit =
+    data.featured_limit === 6 || data.featured_limit === 9
+      ? data.featured_limit
+      : 3;
+
   return {
     storeName: data.store_name,
     whatsappNumber: data.whatsapp_number,
+    homepageHeadline: data.homepage_headline,
     homepageIntro: data.homepage_intro,
     unavailableMessage: data.unavailable_message,
+    featuredLimit,
+    homepageEyebrow: data.homepage_eyebrow,
+    homepageCtaCatalog: data.homepage_cta_catalog,
+    homepageCtaHow: data.homepage_cta_how,
+    homepageFeaturedTitle: data.homepage_featured_title,
+    homepageHowTitle: data.homepage_how_title,
+    homepageHowSteps: normalizeVariableCopyItems(
+      data.homepage_how_steps,
+      DEFAULT_HOMEPAGE_HOW_STEPS,
+    ),
+    homepageWhyTitle: data.homepage_why_title,
+    homepageWhyItems: normalizeVariableCopyItems(
+      data.homepage_why_items,
+      DEFAULT_HOMEPAGE_WHY_ITEMS,
+      { min: MIN_HOMEPAGE_WHY_ITEMS, max: MAX_HOMEPAGE_WHY_ITEMS },
+    ),
+    homepageWhyCta: data.homepage_why_cta,
+    privacyTitle: data.privacy_title,
+    privacyBody: data.privacy_body,
+    cookieTitle: data.cookie_title,
+    cookieBody: data.cookie_body,
+    aboutTitle: data.about_title,
+    aboutBody: data.about_body,
   };
 }
 
@@ -122,6 +169,7 @@ function mapProduct(row: ProductRow): PublishedProduct {
     shortDescription: row.short_description,
     description: row.description,
     isAvailable: row.is_available,
+    isFeatured: Boolean(row.is_featured),
     availabilityNoticeEnabled: row.availability_notice_enabled,
     availabilityNoticeText: row.availability_notice_text,
     media,

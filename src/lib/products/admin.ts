@@ -13,6 +13,7 @@ export type AdminProductListItem = {
   price: number;
   isPublished: boolean;
   isAvailable: boolean;
+  isFeatured: boolean;
   availabilityNoticeEnabled: boolean;
   updatedAt: string;
 };
@@ -57,7 +58,7 @@ export async function listAdminProducts(
   let query = supabase
     .from("products")
     .select(
-      "id, name, slug, price, is_published, is_available, availability_notice_enabled, updated_at",
+      "id, name, slug, price, is_published, is_available, is_featured, availability_notice_enabled, updated_at",
     )
     .order("updated_at", { ascending: false });
 
@@ -91,6 +92,7 @@ export async function listAdminProducts(
     price: Number(row.price),
     isPublished: row.is_published,
     isAvailable: row.is_available,
+    isFeatured: Boolean(row.is_featured),
     availabilityNoticeEnabled: row.availability_notice_enabled,
     updatedAt: row.updated_at,
   }));
@@ -105,7 +107,7 @@ export async function getAdminProduct(
     .select(
       `
       id, name, slug, price, short_description, description,
-      is_published, is_available, availability_notice_enabled, availability_notice_text,
+      is_published, is_available, is_featured, availability_notice_enabled, availability_notice_text,
       created_at, updated_at,
       product_media (id, media_type, storage_path, external_url, platform, alt_text, position),
       product_features (id, name, value, position)
@@ -192,6 +194,7 @@ export async function getAdminProduct(
     description: data.description,
     isPublished: data.is_published,
     isAvailable: data.is_available,
+    isFeatured: Boolean(data.is_featured),
     availabilityNoticeEnabled: data.availability_notice_enabled,
     availabilityNoticeText: data.availability_notice_text,
     createdAt: data.created_at,
@@ -199,6 +202,25 @@ export async function getAdminProduct(
     features,
     media,
   };
+}
+
+export async function countFeaturedProducts(excludeId?: string) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("is_featured", true);
+
+  if (excludeId) {
+    query = query.neq("id", excludeId);
+  }
+
+  const { count, error } = await query;
+  if (error) {
+    throw new Error("Impossibile contare i prodotti in evidenza.");
+  }
+
+  return count ?? 0;
 }
 
 export async function slugExists(slug: string, excludeId?: string) {

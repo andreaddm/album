@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
+import { PageBody } from "@/components/layout/page-body";
 import { PageIntro } from "@/components/layout/page-intro";
+import { getStorePublicSettings } from "@/lib/products/queries";
+import {
+  DEFAULT_COOKIE_BODY,
+  DEFAULT_COOKIE_TITLE,
+} from "@/lib/settings/page-defaults";
 
-export const metadata: Metadata = {
-  title: "Cookie",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getStorePublicSettings();
+  return {
+    title: settings?.cookieTitle?.trim() || DEFAULT_COOKIE_TITLE,
+  };
+}
 
-export default function CookiePage() {
+export default async function CookiePage() {
+  const settings = await getStorePublicSettings();
+  const title = settings?.cookieTitle?.trim() || DEFAULT_COOKIE_TITLE;
+  const body = settings?.cookieBody?.trim() || DEFAULT_COOKIE_BODY;
+
   return (
-    <PageIntro title="Cookie">
-      <p>
-        La pagina sui cookie sarà completata prima della pubblicazione, dopo
-        aver definito gli strumenti effettivamente usati dal sito.
-      </p>
+    <PageIntro title={title}>
+      <PageBody text={body} />
     </PageIntro>
   );
 }

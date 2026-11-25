@@ -28,6 +28,27 @@ export function productImagePath(productId: string, mime: string) {
   return `${productId}/${crypto.randomUUID()}.${extension}`;
 }
 
+export function homepageHeroImagePath(mime: string) {
+  const extension = extensionForMime(mime);
+  if (!extension) {
+    return null;
+  }
+
+  return `homepage-hero/${crypto.randomUUID()}.${extension}`;
+}
+
+export function aboutPageImagePath(
+  kind: "background" | "gallery",
+  mime: string,
+) {
+  const extension = extensionForMime(mime);
+  if (!extension) {
+    return null;
+  }
+
+  return `about-page/${kind}/${crypto.randomUUID()}.${extension}`;
+}
+
 export function publicImageUrl(storagePath: string, baseUrl: string) {
   const encoded = storagePath
     .split("/")

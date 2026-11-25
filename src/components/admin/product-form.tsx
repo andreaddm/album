@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
   createProduct,
+  suggestSlug,
   updateProduct,
   type ActionResult,
 } from "@/app/admin/prodotti/actions";
@@ -20,6 +21,7 @@ type ProductFormValues = {
   description: string;
   isPublished: boolean;
   isAvailable: boolean;
+  isFeatured: boolean;
   availabilityNoticeEnabled: boolean;
   availabilityNoticeText: string;
   features: FeatureDraft[];
@@ -33,6 +35,7 @@ const emptyValues: ProductFormValues = {
   description: "",
   isPublished: false,
   isAvailable: true,
+  isFeatured: false,
   availabilityNoticeEnabled: false,
   availabilityNoticeText: "",
   features: [],
@@ -41,9 +44,13 @@ const emptyValues: ProductFormValues = {
 export function ProductForm({
   productId,
   initial,
+  featuredLimit = 3,
+  otherFeaturedCount = 0,
 }: {
   productId?: string;
   initial?: Partial<ProductFormValues>;
+  featuredLimit?: 3 | 6 | 9;
+  otherFeaturedCount?: number;
 }) {
   const formId = useId();
   const [values, setValues] = useState<ProductFormValues>({
@@ -55,12 +62,46 @@ export function ProductForm({
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const slugRequestId = useRef(0);
+  const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const featuredSlotsFull =
+    otherFeaturedCount >= featuredLimit && !values.isFeatured;
+
+  useEffect(() => {
+    return () => {
+      if (slugTimer.current) {
+        clearTimeout(slugTimer.current);
+      }
+    };
+  }, []);
 
   function update<Key extends keyof ProductFormValues>(
     key: Key,
     value: ProductFormValues[Key],
   ) {
     setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function proposeUniqueSlug(name: string) {
+    const immediate = slugifyName(name);
+    update("slug", immediate);
+
+    if (slugTimer.current) {
+      clearTimeout(slugTimer.current);
+    }
+
+    const requestId = ++slugRequestId.current;
+    slugTimer.current = setTimeout(async () => {
+      try {
+        const unique = await suggestSlug(name, productId);
+        if (requestId !== slugRequestId.current) {
+          return;
+        }
+        setValues((current) => ({ ...current, slug: unique }));
+      } catch {
+        // Resta lo slug locale; il server segnalerà eventuali conflitti.
+      }
+    }, 350);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -73,8 +114,19 @@ export function ProductForm({
     setMessage(null);
     setFieldErrors({});
 
+    let slug = values.slug;
+    if (!slugTouched && values.name.trim()) {
+      try {
+        slug = await suggestSlug(values.name, productId);
+        update("slug", slug);
+      } catch {
+        // Usa lo slug già presente nel form.
+      }
+    }
+
     const payload = {
       ...values,
+      slug,
       price: values.price,
       features: values.features.filter(
         (feature) => feature.name.trim() && feature.value.trim(),
@@ -106,7 +158,7 @@ export function ProductForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
+    <form onSubmit={onSubmit} className="space-y-8 pb-28">
       <section className="space-y-4">
         <h2 className="font-serif text-3xl text-ink">Dati principali</h2>
         <Field
@@ -117,17 +169,22 @@ export function ProductForm({
           onChange={(name) => {
             update("name", name);
             if (!slugTouched) {
-              update("slug", slugifyName(name));
+              proposeUniqueSlug(name);
             }
           }}
         />
         <Field
           id={`${formId}-slug`}
-          label="Slug"
+          label="Link prodotto"
           value={values.slug}
           error={fieldErrors.slug}
+          hint="Solo lettere minuscole, numeri e trattini (es. album-lino-naturale)."
           onChange={(slug) => {
             setSlugTouched(true);
+            if (slugTimer.current) {
+              clearTimeout(slugTimer.current);
+            }
+            slugRequestId.current += 1;
             update("slug", slug);
           }}
         />
@@ -171,6 +228,23 @@ export function ProductForm({
           checked={values.isAvailable}
           onChange={(isAvailable) => update("isAvailable", isAvailable)}
         />
+        <CheckboxField
+          id={`${formId}-featured`}
+          label="Mostra in evidenza"
+          checked={values.isFeatured}
+          disabled={featuredSlotsFull}
+          hint={
+            featuredSlotsFull
+              ? `Limite raggiunto: ${featuredLimit} prodotti già in evidenza. Togli la spunta da un altro prodotto oppure alza il limite in Impostazioni.`
+              : `In homepage, fino a ${featuredLimit} prodotti con questa spunta (${otherFeaturedCount} già selezionati).`
+          }
+          onChange={(isFeatured) => update("isFeatured", isFeatured)}
+        />
+        {fieldErrors.isFeatured ? (
+          <p className="text-sm text-terracotta" role="alert">
+            {fieldErrors.isFeatured}
+          </p>
+        ) : null}
         <CheckboxField
           id={`${formId}-notice`}
           label="Mostra avviso scorte limitate"
@@ -256,22 +330,29 @@ export function ProductForm({
         )}
       </section>
 
-      {message ? (
-        <p
-          className={`text-sm ${message.includes("salvato") ? "text-ink" : "text-terracotta"}`}
-          role="status"
-        >
-          {message}
-        </p>
-      ) : null}
-
-      <Button type="submit" disabled={pending}>
-        {pending
-          ? "Salvataggio…"
-          : productId
-            ? "Salva modifiche"
-            : "Crea prodotto"}
-      </Button>
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-end p-4 sm:p-6">
+        <div className="pointer-events-auto flex max-w-full flex-col items-end gap-2">
+          {message ? (
+            <p
+              className={`rounded-full px-4 py-2 text-sm shadow-sm ${
+                message.includes("salvato")
+                  ? "bg-ivory text-ink"
+                  : "bg-ivory text-terracotta"
+              }`}
+              role="status"
+            >
+              {message}
+            </p>
+          ) : null}
+          <Button type="submit" disabled={pending} className="shadow-md">
+            {pending
+              ? "Salvataggio…"
+              : productId
+                ? "Salva modifiche"
+                : "Crea prodotto"}
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

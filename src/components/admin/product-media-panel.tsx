@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   addProductVideo,
   deleteProductMedia,
@@ -20,9 +20,11 @@ export function ProductMediaPanel({
   media: AdminMediaItem[];
 }) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [alt, setAlt] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const videoCount = media.filter((item) => item.kind === "video").length;
 
@@ -55,6 +57,7 @@ export function ProductMediaPanel({
       if (result.ok) {
         form.reset();
         setAlt("");
+        setFileName(null);
       }
       return result;
     });
@@ -149,17 +152,30 @@ export function ProductMediaPanel({
 
       <form onSubmit={onUpload} className="space-y-4 rounded-3xl bg-sand/50 p-5">
         <h3 className="font-serif text-2xl text-ink">Carica immagine</h3>
-        <label className="block text-sm text-ink" htmlFor="product-image">
-          File
-          <input
-            id="product-image"
-            name="file"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            required
-            className="mt-2 block w-full text-sm"
-          />
-        </label>
+        <input
+          ref={fileInputRef}
+          id="product-image"
+          name="file"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          required
+          className="sr-only"
+          onChange={(event) => {
+            setFileName(event.target.files?.[0]?.name ?? null);
+          }}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Cerca file
+          </Button>
+          <p className="text-sm text-stone">
+            {fileName ?? "Nessun file selezionato"}
+          </p>
+        </div>
         <Field
           id="product-image-alt"
           label="Testo alternativo"

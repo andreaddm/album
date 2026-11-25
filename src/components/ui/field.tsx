@@ -3,6 +3,7 @@ type FieldProps = {
   label: string;
   value: string;
   error?: string;
+  hint?: string;
   onChange: (value: string) => void;
   type?: string;
   autoComplete?: string;
@@ -15,12 +16,20 @@ export function Field({
   label,
   value,
   error,
+  hint,
   onChange,
   type = "text",
   autoComplete,
   inputMode,
   required,
 }: FieldProps) {
+  const describedBy = [
+    hint ? `${id}-hint` : null,
+    error ? `${id}-error` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <label className="block text-sm text-ink" htmlFor={id}>
       {label}
@@ -33,9 +42,14 @@ export function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={describedBy || undefined}
         className="mt-2 w-full rounded-full border border-ink/20 bg-ivory px-3 py-2"
       />
+      {hint ? (
+        <span id={`${id}-hint`} className="mt-1 block text-xs text-ink/60">
+          {hint}
+        </span>
+      ) : null}
       {error ? (
         <span id={`${id}-error`} className="mt-1 block text-terracotta" role="alert">
           {error}
@@ -88,19 +102,35 @@ type CheckboxProps = {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  hint?: string;
 };
 
-export function CheckboxField({ id, label, checked, onChange }: CheckboxProps) {
+export function CheckboxField({
+  id,
+  label,
+  checked,
+  onChange,
+  disabled,
+  hint,
+}: CheckboxProps) {
   return (
-    <label className="flex items-start gap-3 text-sm text-ink" htmlFor={id}>
+    <label
+      className={`flex items-start gap-3 text-sm ${disabled ? "text-stone" : "text-ink"}`}
+      htmlFor={id}
+    >
       <input
         id={id}
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 size-4 accent-ink-button"
+        className="mt-1 size-4 accent-ink-button disabled:cursor-not-allowed"
       />
-      <span>{label}</span>
+      <span>
+        {label}
+        {hint ? <span className="mt-1 block text-xs text-ink/60">{hint}</span> : null}
+      </span>
     </label>
   );
 }

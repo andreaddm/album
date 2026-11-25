@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AddToCartButton } from "@/components/products/add-to-cart-button";
 import { AvailabilityNote } from "@/components/products/availability-note";
-import { ImageCarousel } from "@/components/products/image-carousel";
+import { ProductGallery } from "@/components/products/product-gallery";
 import { formatPrice } from "@/lib/products/price";
 import type { PublishedProduct } from "@/lib/products/types";
 
@@ -14,7 +14,7 @@ export function ProductCard({
 }) {
   return (
     <article className="flex flex-col gap-4 rounded-3xl bg-white p-4">
-      <ImageCarousel images={product.images} name={product.name} />
+      <ProductGallery media={product.media} name={product.name} />
       <div className="flex flex-1 flex-col gap-3">
         <div>
           <h2 className="font-serif text-3xl text-ink">

@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { ProductActions } from "@/components/admin/product-actions";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductMediaPanel } from "@/components/admin/product-media-panel";
 import { ButtonLink } from "@/components/ui/button";
-import { getAdminProduct } from "@/lib/products/admin";
+import {
+  countFeaturedProducts,
+  getAdminProduct,
+} from "@/lib/products/admin";
+import { getAdminStoreSettings } from "@/lib/settings/admin";
 
 export const metadata: Metadata = {
   title: "Modifica prodotto",
@@ -35,12 +40,19 @@ async function EditProductDetails({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await connection();
   const { id } = await params;
-  const product = await getAdminProduct(id);
+  const [product, settings, otherFeaturedCount] = await Promise.all([
+    getAdminProduct(id),
+    getAdminStoreSettings(),
+    countFeaturedProducts(id),
+  ]);
 
   if (!product) {
     notFound();
   }
+
+  const featuredLimit = settings?.featuredLimit ?? 3;
 
   return (
     <main className="space-y-10">
@@ -70,6 +82,8 @@ async function EditProductDetails({
 
       <ProductForm
         productId={product.id}
+        featuredLimit={featuredLimit}
+        otherFeaturedCount={otherFeaturedCount}
         initial={{
           name: product.name,
           slug: product.slug,
@@ -78,6 +92,7 @@ async function EditProductDetails({
           description: product.description ?? "",
           isPublished: product.isPublished,
           isAvailable: product.isAvailable,
+          isFeatured: product.isFeatured,
           availabilityNoticeEnabled: product.availabilityNoticeEnabled,
           availabilityNoticeText: product.availabilityNoticeText ?? "",
           features: product.features.map((feature) => ({

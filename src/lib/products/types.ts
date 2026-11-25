@@ -29,6 +29,7 @@ export type PublishedProduct = {
   shortDescription: string | null;
   description: string | null;
   isAvailable: boolean;
+  isFeatured: boolean;
   availabilityNoticeEnabled: boolean;
   availabilityNoticeText: string | null;
   media: ProductMedia[];
@@ -36,9 +37,31 @@ export type PublishedProduct = {
   features: ProductFeature[];
 };
 
+export type HomepageCopyItem = {
+  title: string;
+  text: string;
+};
+
 export type StorePublicSettings = {
   storeName: string;
   whatsappNumber: string | null;
+  homepageHeadline: string | null;
   homepageIntro: string | null;
   unavailableMessage: string | null;
+  featuredLimit: 3 | 6 | 9;
+  homepageEyebrow: string | null;
+  homepageCtaCatalog: string | null;
+  homepageCtaHow: string | null;
+  homepageFeaturedTitle: string | null;
+  homepageHowTitle: string | null;
+  homepageHowSteps: HomepageCopyItem[];
+  homepageWhyTitle: string | null;
+  homepageWhyItems: HomepageCopyItem[];
+  homepageWhyCta: string | null;
+  privacyTitle: string | null;
+  privacyBody: string | null;
+  cookieTitle: string | null;
+  cookieBody: string | null;
+  aboutTitle: string | null;
+  aboutBody: string | null;
 };

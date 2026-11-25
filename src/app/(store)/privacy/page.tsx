@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
+import { PageBody } from "@/components/layout/page-body";
 import { PageIntro } from "@/components/layout/page-intro";
+import { getStorePublicSettings } from "@/lib/products/queries";
+import {
+  DEFAULT_PRIVACY_BODY,
+  DEFAULT_PRIVACY_TITLE,
+} from "@/lib/settings/page-defaults";
 
-export const metadata: Metadata = {
-  title: "Privacy",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getStorePublicSettings();
+  return {
+    title: settings?.privacyTitle?.trim() || DEFAULT_PRIVACY_TITLE,
+  };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const settings = await getStorePublicSettings();
+  const title = settings?.privacyTitle?.trim() || DEFAULT_PRIVACY_TITLE;
+  const body = settings?.privacyBody?.trim() || DEFAULT_PRIVACY_BODY;
+
   return (
-    <PageIntro title="Privacy">
-      <p>
-        L&apos;informativa sarà pubblicata con i testi verificati dal titolare
-        e da un consulente. Qui non è riportata un&apos;informativa definitiva.
-      </p>
+    <PageIntro title={title}>
+      <PageBody text={body} />
     </PageIntro>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { ButtonLink } from "@/components/ui/button";
 import { formatPrice } from "@/lib/products/price";
 import { listAdminProducts } from "@/lib/products/admin";
@@ -20,6 +21,7 @@ export default async function AdminProductsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  await connection();
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const published =
